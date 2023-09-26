@@ -138,19 +138,18 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		cmds = append(cmds, cmd)
 	}
 
+	var cmd2 tea.Cmd
+	var update tea.Model
 	switch m.screen {
 	case 0:
-		update, cmd := m.screen1.(tea.Model).Update(msg)
+		update, cmd = m.screen1.(tea.Model).Update(msg)
 		m.screen1 = update.(screen1model)
-		if cmd != nil {
-			cmds = append(cmds, cmd)
-		}
 	case 1:
-		update, cmd := m.screen2.(tea.Model).Update(msg)
+		update, cmd = m.screen2.(tea.Model).Update(msg)
 		m.screen2 = update.(screen2model)
-		if cmd != nil {
-			cmds = append(cmds, cmd)
-		}
+	}
+	if cmd2 != nil {
+		cmds = append(cmds, cmd2)
 	}
 
 	return m, tea.Batch(cmds...)
