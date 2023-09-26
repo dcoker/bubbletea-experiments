@@ -4,7 +4,9 @@ import (
 	"fmt"
 	"github.com/charmbracelet/bubbles/spinner"
 	tea "github.com/charmbracelet/bubbletea"
+	"log"
 	"os"
+	"reflect"
 	"time"
 )
 
@@ -33,8 +35,8 @@ type model struct {
 	numScreens int
 
 	// screen 1
-	screen1 tea.Model
-	screen2 tea.Model
+	screen1 ScreenModel[struct{}]
+	screen2 ScreenModel[Screen2InputArgs]
 
 	// informative messages for the header
 	error       string
@@ -62,6 +64,11 @@ func (m model) Init() tea.Cmd {
 }
 
 func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	typ := reflect.TypeOf(msg).String()
+	if typ != "spinner.TickMsg" {
+		log.Printf("model.Update: %s; state = %+v", typ, m)
+	}
+
 	// Any msg not handled in this switch statement is passed to spinner or the screen-specific models.
 	switch msg := msg.(type) {
 	case onScreenChange:
@@ -84,19 +91,32 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if m.screen < m.numScreens-1 {
 				to := m.screen + 1
 
-				// If the target screen takes input from another screen, pass it as an event to the new screen's
-				// Update() call.
+				// First, validate that the next screen will accept the input data from the current state.
+				var ok bool
+				var msg string
 				switch to {
+				case 0:
+					ok, msg = m.screen1.Validate(struct{}{})
 				case 1:
-					s1m, _ := m.screen1.(screen1model)
-					m.screen2, _ = m.screen2.Update(onScreen2BeforeRender{filenames: s1m.FilenameArray()})
-					// sometimes new screens might want to do real work before rendering; if so, set .wait and
-					// return a Cmd (faked below).
+					ok, msg = m.screen2.Validate(Screen2InputArgs{filenames: m.screen1.(screen1model).FilenameArray()})
 				}
+				// If the next screen doesn't accept the data, display a helpful error message.
+				if !ok {
+					m.error = msg
+					return m, nil
+				} else {
+					// If the data passes validation, then tell the screen's models to accept it.
+					switch to {
+					case 0:
+						m.screen1 = m.screen1.Accept(struct{}{})
+					case 1:
+						m.screen2 = m.screen2.Accept(Screen2InputArgs{filenames: m.screen1.(screen1model).FilenameArray()})
+					}
 
-				m.wait = "pwning newbs ..."
-				return m, func() tea.Msg {
-					return runScreenChange(m.screen, to)
+					m.wait = "thinking real hard ..."
+					return m, func() tea.Msg {
+						return runScreenChange(m.screen, to)
+					}
 				}
 			}
 			return m, nil
@@ -114,12 +134,14 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	switch m.screen {
 	case 0:
-		m.screen1, cmd = m.screen1.Update(msg)
+		update, cmd := m.screen1.(tea.Model).Update(msg)
+		m.screen1 = update.(screen1model)
 		if cmd != nil {
 			cmds = append(cmds, cmd)
 		}
 	case 1:
-		m.screen2, cmd = m.screen2.Update(msg)
+		update, cmd := m.screen2.(tea.Model).Update(msg)
+		m.screen2 = update.(screen2model)
 		if cmd != nil {
 			cmds = append(cmds, cmd)
 		}
@@ -153,10 +175,14 @@ func (m model) View() string {
 }
 
 func main() {
+	file, err := tea.LogToFile("debug.log", "")
+	if err != nil {
+		panic(err)
+	}
+	defer file.Close()
 	p := tea.NewProgram(initialModel())
 	if _, err := p.Run(); err != nil {
 		fmt.Printf("err: %v", err)
 		os.Exit(1)
 	}
-
 }

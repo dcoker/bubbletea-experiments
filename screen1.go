@@ -34,6 +34,14 @@ type screen1model struct {
 	spinner  spinner.Model
 }
 
+func (m screen1model) Validate(_ struct{}) (bool, string) {
+	return true, ""
+}
+
+func (m screen1model) Accept(_ struct{}) ScreenModel[struct{}] {
+	return m
+}
+
 func (m screen1model) FilenameArray() []string {
 	out := []string{}
 	for i, v := range m.choices {
@@ -44,7 +52,7 @@ func (m screen1model) FilenameArray() []string {
 	return out
 }
 
-func screen1InitialModel() tea.Model {
+func screen1InitialModel() ScreenModel[struct{}] {
 	return screen1model{
 		choices:  []string{},
 		selected: make(map[int]struct{}),
