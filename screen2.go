@@ -23,9 +23,9 @@ func (m screen2model) Validate(args Screen2InputArgs) (bool, string) {
 	return true, ""
 }
 
-func (m screen2model) Accept(args Screen2InputArgs) ScreenModel[Screen2InputArgs] {
+func (m screen2model) Accept(args Screen2InputArgs) (ScreenModel[Screen2InputArgs], tea.Cmd) {
 	m.filenames = args.filenames
-	return m
+	return m, nil
 }
 
 func screen2InitialModel() ScreenModel[Screen2InputArgs] {

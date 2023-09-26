@@ -105,18 +105,24 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					m.error = msg
 					return m, nil
 				} else {
-					// If the data passes validation, then tell the screen's models to accept it.
+					// If the data passes validation, then tell the screen's models to accept it, and allow it to
+					// start a Cmd.
+					var cmd tea.Cmd
 					switch to {
 					case 0:
-						m.screen1 = m.screen1.Accept(struct{}{})
+						m.screen1, cmd = m.screen1.Accept(struct{}{})
 					case 1:
-						m.screen2 = m.screen2.Accept(Screen2InputArgs{filenames: m.screen1.(screen1model).FilenameArray()})
+						m.screen2, cmd = m.screen2.Accept(Screen2InputArgs{filenames: m.screen1.(screen1model).FilenameArray()})
 					}
-
-					m.wait = "thinking real hard ..."
-					return m, func() tea.Msg {
+					var cmds []tea.Cmd
+					if cmd != nil {
+						cmds = append(cmds, cmd)
+					}
+					cmds = append(cmds, func() tea.Msg { // fake work
 						return runScreenChange(m.screen, to)
-					}
+					})
+					m.wait = "thinking real hard ..."
+					return m, tea.Batch(cmds...)
 				}
 			}
 			return m, nil

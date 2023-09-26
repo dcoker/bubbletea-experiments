@@ -9,5 +9,5 @@ type ScreenModel[S any] interface {
 	Validate(args S) (bool, string)
 	// Accept merges the parameter's data into the model. Cannot fail, because we already promised to accept it during
 	// Validate.
-	Accept(args S) ScreenModel[S]
+	Accept(args S) (ScreenModel[S], tea.Cmd)
 }

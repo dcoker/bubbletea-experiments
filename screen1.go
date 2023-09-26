@@ -38,8 +38,8 @@ func (m screen1model) Validate(_ struct{}) (bool, string) {
 	return true, ""
 }
 
-func (m screen1model) Accept(_ struct{}) ScreenModel[struct{}] {
-	return m
+func (m screen1model) Accept(_ struct{}) (ScreenModel[struct{}], tea.Cmd) {
+	return m, nil
 }
 
 func (m screen1model) FilenameArray() []string {
